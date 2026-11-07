@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Балақай: ЕББҚ Балаларға Арналған Қолжетімді Платформа</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Fredoka & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Tone.js for audio synth -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Fredoka', 'Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        pastelBlue: '#E0F2FE',
+                        pastelGreen: '#DCFCE7',
+                        pastelYellow: '#FEF9C3',
+                        pastelPink: '#FCE7F3',
+                        pastelPurple: '#F3E8FF',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Fredoka', 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            font-size: 18px;
+        }
+
+        /* Accessibility Focus Indicator */
+        button:focus, div[role="button"]:focus, a:focus {
+            outline: 5px solid #0284C7 !important;
+            outline-offset: 4px !important;
+        }
+
+        .bounce-hover:hover {
+            transform: scale(1.04);
+        }
+
+        .bounce-active:active {
+            transform: scale(0.96);
+        }
+
+        /* High Contrast Theme Override (WCAG AAA) */
+        .high-contrast {
+            background-color: #000000 !important;
+            color: #FFFFFF !important;
+        }
+        
+        .high-contrast header {
+            background-color: #111111 !important;
+            border-bottom: 3px solid #FFFF00 !important;
+        }
+
+        .high-contrast .module-card,
+        .high-contrast .game-box {
+            background-color: #1A1A1A !important;
+            color: #FFFFFF !important;
+            border: 4px solid #FFFF00 !important;
+            box-shadow: none !important;
+        }
+
+        .high-contrast button {
+            background-color: #000000 !important;
+            color: #FFFF00 !important;
+            border: 3px solid #00FFFF !important;
+        }
+
+        .high-contrast button:hover,
+        .high-contrast button:focus {
+            background-color: #FFFF00 !important;
+            color: #000000 !important;
+        }
+
+        .high-contrast p, 
+        .high-contrast h1, 
+        .high-contrast h2, 
+        .high-contrast h3,
+        .high-contrast span {
+            color: #FFFFFF !important;
+        }
+        
+        .card-inner {
+            transition: transform 0.5s;
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            backface-visibility: hidden;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body class="bg-sky-50 text-slate-800 min-h-screen flex flex-col transition-colors duration-300" id="mainBody">
+
+    <!-- Top Accessible Header & Controls -->
+    <header class="bg-white shadow-md p-4 sticky top-0 z-50 border-b-2 border-sky-100">
+        <div class="max-w-6xl mx-auto flex justify-between items-center flex-wrap gap-3">
+            
+            <!-- Logo / Title -->
+            <button onclick="switchModule('menu')" class="flex items-center space-x-3 text-left rounded-2xl p-2 hover:bg-sky-50 transition-colors" aria-label="Бас мәзірге қайту">
+                <div class="w-14 h-14 bg-amber-400 rounded-full flex items-center justify-center text-white text-3xl shadow-md">
+                    <i class="fa-solid fa-star"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-sky-600 tracking-wide">Балақай</h1>
+                    <p class="text-xs sm:text-sm text-gray-500 font-semibold">ЕББҚ балаларға арналған қолжетімді орталық</p>
+                </div>
+            </button>
+
+            <!-- Accessibility Toolbar -->
+            <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <!-- Stars Score -->
+                <div class="bg-amber-100 border-2 border-amber-300 px-4 py-2 rounded-2xl flex items-center space-x-2 shadow-sm">
+                    <i class="fa-solid fa-star text-amber-500 text-2xl animate-pulse"></i>
+                    <span id="starCounter" class="text-2xl font-bold text-amber-800" aria-label="Жұлдыздар саны">0</span>
+                </div>
+
+                <!-- Text Size Adjusters -->
+                <div class="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
+                    <button onclick="changeFontSize(-2)" class="px-3 py-2 bg-white text-slate-700 font-bold rounded-xl shadow-sm text-base hover:bg-slate-50" title="Қарiпті кішірейту" aria-label="Қарiпті кішірейту">A-</button>
+                    <button onclick="changeFontSize(2)" class="px-3 py-2 bg-white text-slate-700 font-bold rounded-xl shadow-sm text-xl hover:bg-slate-50" title="Қарiпті үлкейту" aria-label="Қарiпті үлкейту">A+</button>
+                </div>
+
+                <!-- Speech (TTS) Toggle -->
+                <button id="ttsToggleBtn" onclick="toggleAudioNarration()" title="Дыбыстық сүйемелдеуді қосу немесе өшіру" aria-label="Дыбыстық сүйемелдеуді қосу немесе өшіру" class="p-3 bg-sky-100 hover:bg-sky-200 text-sky-700 rounded-2xl flex items-center justify-center text-xl transition-transform bounce-hover bounce-active">
+                    <i id="ttsIcon" class="fa-solid fa-volume-high"></i>
+                </button>
+
+                <!-- High Contrast Toggle -->
+                <button onclick="toggleHighContrast()" title="Жоғары контраст режимі (WCAG)" aria-label="Жоғары контраст режимін қосу" class="p-3 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-2xl flex items-center justify-center text-xl transition-transform bounce-hover bounce-active">
+                    <i class="fa-solid fa-eye"></i>
+                </button>
+
+                <!-- Home Button -->
+                <button onclick="switchModule('menu')" title="Бас мәзірге қайту" aria-label="Бас мәзір" class="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl flex items-center space-x-2 text-lg shadow-md transition-transform bounce-hover bounce-active">
+                    <i class="fa-solid fa-house"></i>
+                    <span class="hidden sm:inline">Мәзір</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6 flex flex-col items-center justify-center" id="contentArea">
+
+        <!-- MODULE MENU -->
+        <section id="module-menu" class="w-full">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl md:text-4xl font-bold text-sky-700 mb-2">Сәлем, Балақай! 👋</h2>
+                <p class="text-xl text-slate-600 font-medium">Ойынды таңдап, бірге үйренейік!</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl mx-auto">
+                
+                <button onclick="switchModule('shapes')" class="module-card bg-pastelYellow border-4 border-amber-300 rounded-3xl p-6 flex flex-col items-center justify-center text-center shadow-lg transition-transform bounce-hover bounce-active group">
+                    <div class="w-24 h-24 bg-amber-400 rounded-full flex items-center justify-center text-white text-5xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-shapes"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-amber-900 mb-1">Түстер мен Пішіндер</h3>
+                    <p class="text-base text-amber-800">Фигураларды сұрыптау</p>
+                </button>
+
+                <button onclick="switchModule('motor')" class="module-card bg-pastelGreen border-4 border-emerald-300 rounded-3xl p-6 flex flex-col items-center justify-center text-center shadow-lg transition-transform bounce-hover bounce-active group">
+                    <div class="w-24 h-24 bg-emerald-400 rounded-full flex items-center justify-center text-white text-5xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-hand-pointer"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-emerald-900 mb-1">Ұсақ Моторика</h3>
+                    <p class="text-base text-emerald-800">Сызықпен жүру</p>
+                </button>
+
+                <button onclick="switchModule('memory')" class="module-card bg-pastelPurple border-4 border-purple-300 rounded-3xl p-6 flex flex-col items-center justify-center text-center shadow-lg transition-transform bounce-hover bounce-active group">
+                    <div class="w-24 h-24 bg-purple-400 rounded-full flex items-center justify-center text-white text-5xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-brain"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-purple-900 mb-1">Жұп Суреттер</h3>
+                    <p class="text-base text-purple-800">Есте сақтау ойыны</p>
+                </button>
+
+                <button onclick="switchModule('odd')" class="module-card bg-pastelPink border-4 border-pink-300 rounded-3xl p-6 flex flex-col items-center justify-center text-center shadow-lg transition-transform bounce-hover bounce-active group">
+                    <div class="w-24 h-24 bg-pink-400 rounded-full flex items-center justify-center text-white text-5xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-pink-900 mb-1">Артық Затты Тап</h3>
+                    <p class="text-base text-pink-800">Логика мен зейін</p>
+                </button>
+
+                <button onclick="switchModule('emotions')" class="module-card bg-pastelBlue border-4 border-sky-300 rounded-3xl p-6 flex flex-col items-center justify-center text-center shadow-lg transition-transform bounce-hover bounce-active group sm:col-span-2 lg:col-span-1">
+                    <div class="w-24 h-24 bg-sky-400 rounded-full flex items-center justify-center text-white text-5xl mb-4 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-face-smile"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-sky-900 mb-1">Эмоциялар Әлемі</h3>
+                    <p class="text-base text-sky-800">Көңіл-күйді тану</p>
+                </button>
+
+            </div>
+        </section>
+
+        <!-- MODULE 1: SHAPES & COLORS -->
+        <section id="module-shapes" class="w-full hidden flex-col items-center">
+            <div class="game-box bg-white rounded-3xl p-6 sm:p-8 shadow-xl w-full max-w-3xl border-4 border-amber-200">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-amber-800 flex items-center gap-3">
+                        <i class="fa-solid fa-shapes text-amber-500"></i> Түстер мен Пішіндер
+                    </h2>
+                    <button onclick="speakText('Пішінді таңдап, сәйкес түсті себетке сал!')" class="p-3 bg-amber-100 rounded-2xl text-amber-700 hover:bg-amber-200" aria-label="Нұсқаулықты тыңдау">
+                        <i class="fa-solid fa-volume-high text-2xl"></i>
+                    </button>
+                </div>
+                <p id="shapesInstruction" class="text-xl text-slate-700 mb-6 text-center font-bold">Жоғарыдағы пішінді таңдап, оған сәйкес себетті бас!</p>
+
+                <div id="shapesPool" class="flex justify-center items-center gap-6 min-h-[130px] bg-amber-50 p-6 rounded-3xl mb-8 border-4 border-dashed border-amber-300 flex-wrap"></div>
+
+                <div id="basketsContainer" class="grid grid-cols-1 sm:grid-cols-3 gap-6"></div>
+
+                <div class="mt-8 flex justify-center">
+                    <button onclick="initShapesGame()" class="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl text-xl shadow-lg transition-transform bounce-hover">
+                        <i class="fa-solid fa-rotate-right mr-2"></i> Жанадан бастау
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODULE 2: MOTOR SKILLS / TRACING -->
+        <section id="module-motor" class="w-full hidden flex-col items-center">
+            <div class="game-box bg-white rounded-3xl p-6 sm:p-8 shadow-xl w-full max-w-3xl border-4 border-emerald-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-emerald-800 flex items-center gap-3">
+                        <i class="fa-solid fa-hand-pointer text-emerald-500"></i> Ұсақ Моторика
+                    </h2>
+                    <button onclick="speakText('Сызық бойымен тиінді жаңғаққа жеткіз!')" class="p-3 bg-emerald-100 rounded-2xl text-emerald-700 hover:bg-emerald-200" aria-label="Нұсқаулықты тыңдау">
+                        <i class="fa-solid fa-volume-high text-2xl"></i>
+                    </button>
+                </div>
+                <p class="text-xl text-slate-700 mb-4 text-center font-bold">Тиінді жаңғаққа жеткіз! 🐿️ ➡️ 🥜</p>
+
+                <div class="relative w-full aspect-[4/3] sm:aspect-[16/9] bg-emerald-50 rounded-3xl border-4 border-emerald-300 overflow-hidden touch-none flex items-center justify-center shadow-inner">
+                    <canvas id="tracingCanvas" class="w-full h-full cursor-crosshair"></canvas>
+                </div>
+
+                <div class="mt-6 flex justify-between items-center flex-wrap gap-4">
+                    <div class="text-emerald-900 font-bold text-2xl" id="motorProgress">Прогресс: 0%</div>
+                    <button onclick="initMotorGame()" class="px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl text-xl shadow-lg transition-transform bounce-hover">
+                        <i class="fa-solid fa-rotate-right mr-2"></i> Тазалау
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODULE 3: MEMORY CARDS -->
+        <section id="module-memory" class="w-full hidden flex-col items-center">
+            <div class="game-box bg-white rounded-3xl p-6 sm:p-8 shadow-xl w-full max-w-3xl border-4 border-purple-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-purple-800 flex items-center gap-3">
+                        <i class="fa-solid fa-brain text-purple-500"></i> Жұп Суреттер
+                    </h2>
+                    <button onclick="speakText('Екі бірдей суретті тап!')" class="p-3 bg-purple-100 rounded-2xl text-purple-700 hover:bg-purple-200" aria-label="Нұсқаулықты тыңдау">
+                        <i class="fa-solid fa-volume-high text-2xl"></i>
+                    </button>
+                </div>
+                <p class="text-xl text-slate-700 mb-6 text-center font-bold">Карточкаларды басып, бірдей суреттерді тап!</p>
+
+                <div id="memoryGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto"></div>
+
+                <div class="mt-8 flex justify-center">
+                    <button onclick="initMemoryGame()" class="px-8 py-4 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-2xl text-xl shadow-lg transition-transform bounce-hover">
+                        <i class="fa-solid fa-rotate-right mr-2"></i> Қайта бастау
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODULE 4: ODD ONE OUT -->
+        <section id="module-odd" class="w-full hidden flex-col items-center">
+            <div class="game-box bg-white rounded-3xl p-6 sm:p-8 shadow-xl w-full max-w-3xl border-4 border-pink-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-pink-800 flex items-center gap-3">
+                        <i class="fa-solid fa-magnifying-glass text-pink-500"></i> Артық Затты Тап
+                    </h2>
+                    <button onclick="speakText('Ұқсамайтын артық затты таңда!')" class="p-3 bg-pink-100 rounded-2xl text-pink-700 hover:bg-pink-200" aria-label="Нұсқаулықты тыңдау">
+                        <i class="fa-solid fa-volume-high text-2xl"></i>
+                    </button>
+                </div>
+                <p class="text-xl text-slate-700 mb-6 text-center font-bold">Осы суреттердің арасынан артық затты тап:</p>
+
+                <div id="oddItemsContainer" class="flex flex-wrap justify-center items-center gap-6 p-6 min-h-[200px]"></div>
+
+                <div class="mt-8 flex justify-center">
+                    <button onclick="nextOddQuestion()" class="px-8 py-4 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-2xl text-xl shadow-lg transition-transform bounce-hover">
+                        Келесі Сұрақ <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODULE 5: EMOTIONS -->
+        <section id="module-emotions" class="w-full hidden flex-col items-center">
+            <div class="game-box bg-white rounded-3xl p-6 sm:p-8 shadow-xl w-full max-w-3xl border-4 border-sky-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl sm:text-3xl font-bold text-sky-800 flex items-center gap-3">
+                        <i class="fa-solid fa-face-smile text-sky-500"></i> Эмоциялар Әлемі
+                    </h2>
+                    <button onclick="speakText('Дұрыс эмоцияны таңда!')" class="p-3 bg-sky-100 rounded-2xl text-sky-700 hover:bg-sky-200" aria-label="Нұсқаулықты тыңдау">
+                        <i class="fa-solid fa-volume-high text-2xl"></i>
+                    </button>
+                </div>
+                
+                <div class="text-center mb-6">
+                    <div id="emotionEmoji" class="text-9xl mb-4 animate-bounce">😊</div>
+                    <p id="emotionScenario" class="text-2xl font-bold text-sky-900 mb-2">"Балаға сыйлық берді!"</p>
+                    <p class="text-lg text-slate-600 font-semibold">Оның көңіл-күйі қандай?</p>
+                </div>
+
+                <div id="emotionOptions" class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-xl mx-auto"></div>
+
+                <div class="mt-8 flex justify-center">
+                    <button onclick="nextEmotionQuestion()" class="px-8 py-4 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-2xl text-xl shadow-lg transition-transform bounce-hover">
+                        Келесі Эмоция <i class="fa-solid fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Global Accessible Reward Modal -->
+    <div id="rewardModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full text-center shadow-2xl border-4 border-amber-300 transform transition-all scale-100">
+            <div class="text-7xl mb-4">🌟 🥳 🎉</div>
+            <h3 id="modalTitle" class="text-4xl font-bold text-amber-800 mb-3">Жарайсың!</h3>
+            <p class="text-xl text-slate-700 font-medium mb-8">Тапсырманы өте керемет орындадың!</p>
+            <div class="flex justify-center">
+                <button onclick="closeRewardModal()" class="px-10 py-4 bg-amber-500 hover:bg-amber-600 text-white font-bold text-2xl rounded-2xl shadow-xl bounce-hover transition-transform" aria-label="Жалғастыру">
+                    Жалғастыру ✨
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        let ttsEnabled = true;
+        let currentFontSize = 18;
+
+        // Sound Effects with Tone.js
+        let synth;
+        try {
+            synth = new Tone.Synth().toDestination();
+        } catch (e) {
+            console.log("Tone.js Audio Synth Fallback Active");
+        }
+
+        function playSound(type) {
+            if (!synth) return;
+            try {
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                if (type === 'pop') {
+                    synth.triggerAttackRelease("C5", "8n");
+                } else if (type === 'success') {
+                    const now = Tone.now();
+                    synth.triggerAttackRelease("C5", "8n", now);
+                    synth.triggerAttackRelease("E5", "8n", now + 0.1);
+                    synth.triggerAttackRelease("G5", "8n", now + 0.2);
+                    synth.triggerAttackRelease("C6", "4n", now + 0.3);
+                } else if (type === 'wrong') {
+                    synth.triggerAttackRelease("A3", "8n");
+                }
+            } catch(err) {}
+        }
+
+        // Kazakh Text-to-Speech (TTS)
+        function speakText(text) {
+            if (!ttsEnabled) return;
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'kk-KZ';
+                utterance.rate = 0.85;
+                utterance.pitch = 1.1;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function toggleAudioNarration() {
+            ttsEnabled = !ttsEnabled;
+            const icon = document.getElementById('ttsIcon');
+            const btn = document.getElementById('ttsToggleBtn');
+            if (ttsEnabled) {
+                icon.className = 'fa-solid fa-volume-high';
+                btn.classList.replace('bg-gray-200', 'bg-sky-100');
+                speakText('Дыбыстық сүйемелдеу қосылды');
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark';
+                btn.classList.replace('bg-sky-100', 'bg-gray-200');
+                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            }
+        }
+
+        // Accessibility: High Contrast & Font Resizing
+        function toggleHighContrast() {
+            document.body.classList.toggle('high-contrast');
+            playSound('pop');
+            speakText(document.body.classList.contains('high-contrast') ? 'Жоғары контраст қосылды' : 'Қалыпты режим');
+        }
+
+        function changeFontSize(delta) {
+            currentFontSize = Math.min(Math.max(currentFontSize + delta, 16), 26);
+            document.body.style.fontSize = currentFontSize + 'px';
+            playSound('pop');
+        }
+
+        // Star Counter & Reward Modal
+        let totalStars = 0;
+        function addStar(count = 1) {
+            totalStars += count;
+            document.getElementById('starCounter').innerText = totalStars;
+            playSound('success');
+            triggerConfetti();
+        }
+
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 60,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+
+        function showRewardModal() {
+            addStar(1);
+            const modal = document.getElementById('rewardModal');
+            modal.classList.remove('hidden');
+            speakText("Тамаша! Жарайсың!");
+        }
+
+        function closeRewardModal() {
+            document.getElementById('rewardModal').classList.add('hidden');
+        }
+
+        // Module Switcher
+        function switchModule(moduleId) {
+            playSound('pop');
+            const modules = ['menu', 'shapes', 'motor', 'memory', 'odd', 'emotions'];
+            modules.forEach(id => {
+                const el = document.getElementById(`module-${id}`);
+                if (el) {
+                    if (id === moduleId) {
+                        el.classList.remove('hidden');
+                        el.classList.add('flex');
+                    } else {
+                        el.classList.add('hidden');
+                        el.classList.remove('flex');
+                    }
+                }
+            });
+
+            if (moduleId === 'shapes') {
+                initShapesGame();
+                speakText('Түстер мен пішіндер ойыны. Сәйкес түсті себетке сал!');
+            } else if (moduleId === 'motor') {
+                initMotorGame();
+                speakText('Ұсақ моторика ойыны. Сызық бойымен саусағыңды жүргіз!');
+            } else if (moduleId === 'memory') {
+                initMemoryGame();
+                speakText('Жұп суреттер ойыны. Бірдей карточкаларды тап!');
+            } else if (moduleId === 'odd') {
+                initOddGame();
+                speakText('Артық затты тап ойыны!');
+            } else if (moduleId === 'emotions') {
+                initEmotionsGame();
+                speakText('Эмоциялар әлемі. Баланың көңіл күйін таңда!');
+            }
+        }
+
+        // --- MODULE 1: SHAPES & COLORS ---
+        const shapeItems = [
+            { id: 'red-circle', shape: 'fa-circle', colorName: 'Қызыл', colorClass: 'bg-red-500', textClass: 'text-red-500', borderClass: 'border-red-400' },
+            { id: 'blue-square', shape: 'fa-square', colorName: 'Көк', colorClass: 'bg-blue-500', textClass: 'text-blue-500', borderClass: 'border-blue-400' },
+            { id: 'green-triangle', shape: 'fa-play -rotate-90', colorName: 'Жасыл', colorClass: 'bg-green-500', textClass: 'text-green-500', borderClass: 'border-green-400' }
+        ];
+        let selectedShape = null;
+
+        function initShapesGame() {
+            const pool = document.getElementById('shapesPool');
+            const baskets = document.getElementById('basketsContainer');
+            pool.innerHTML = '';
+            baskets.innerHTML = '';
+            selectedShape = null;
+
+            shapeItems.forEach((item) => {
+                const shapeEl = document.createElement('button');
+                shapeEl.className = `w-24 h-24 bg-white border-4 ${item.borderClass} rounded-3xl flex items-center justify-center text-5xl ${item.textClass} shadow-md cursor-pointer bounce-hover transition-all select-none`;
+                shapeEl.innerHTML = `<i class="fa-solid ${item.shape}"></i>`;
+                shapeEl.setAttribute('aria-label', `${item.colorName} пішін`);
+                shapeEl.dataset.id = item.id;
+                
+                shapeEl.onclick = () => {
+                    document.querySelectorAll('#shapesPool button').forEach(el => el.classList.remove('ring-8', 'ring-amber-400', 'scale-110'));
+                    shapeEl.classList.add('ring-8', 'ring-amber-400', 'scale-110');
+                    selectedShape = item;
+                    playSound('pop');
+                    speakText(`${item.colorName} пішін таңдалды`);
+                };
+                pool.appendChild(shapeEl);
+            });
+
+            shapeItems.forEach((item) => {
+                const basketEl = document.createElement('button');
+                basketEl.className = `h-40 ${item.colorClass} bg-opacity-20 border-4 border-dashed ${item.borderClass} rounded-3xl flex flex-col items-center justify-center p-4 transition-transform bounce-hover`;
+                basketEl.innerHTML = `
+                    <i class="fa-solid fa-shopping-basket text-5xl mb-2 ${item.textClass}"></i>
+                    <span class="font-bold text-xl ${item.textClass}">${item.colorName} Себет</span>
+                    <div class="matched-holder mt-2 flex gap-2"></div>
+                `;
+                basketEl.setAttribute('aria-label', `${item.colorName} себет`);
+
+                basketEl.onclick = () => {
+                    if (!selectedShape) {
+                        speakText('Алдымен жоғарыдан пішінді таңдаңыз!');
+                        return;
+                    }
+                    if (selectedShape.id === item.id) {
+                        playSound('success');
+                        speakText('Дұрыс! Тамаша!');
+                        const activeInPool = pool.querySelector(`[data-id="${selectedShape.id}"]`);
+                        if (activeInPool) activeInPool.remove();
+                        
+                        const holder = basketEl.querySelector('.matched-holder');
+                        holder.innerHTML += `<i class="fa-solid ${selectedShape.shape} text-3xl ${selectedShape.textClass}"></i>`;
+                        selectedShape = null;
+
+                        if (pool.children.length === 0) {
+                            setTimeout(showRewardModal, 500);
+                        }
+                    } else {
+                        playSound('wrong');
+                        speakText('Қайтадан байқап көр!');
+                    }
+                };
+
+                baskets.appendChild(basketEl);
+            });
+        }
+
+        // --- MODULE 2: FINE MOTOR (TRACING) ---
+        let tracingCtx, canvas;
+        let isTracing = false;
+        let tracedPoints = 0;
+
+        function initMotorGame() {
+            canvas = document.getElementById('tracingCanvas');
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            tracingCtx = canvas.getContext('2d');
+            tracedPoints = 0;
+            document.getElementById('motorProgress').innerText = "Прогресс: 0%";
+
+            drawGuidedPath();
+
+            canvas.onmousedown = startTracing;
+            canvas.onmousemove = moveTracing;
+            canvas.onmouseup = stopTracing;
+
+            canvas.ontouchstart = (e) => { startTracing(e.touches[0]); };
+            canvas.ontouchmove = (e) => { moveTracing(e.touches[0]); e.preventDefault(); };
+            canvas.ontouchend = stopTracing;
+        }
+
+        function drawGuidedPath() {
+            const w = canvas.width;
+            const h = canvas.height;
+            tracingCtx.clearRect(0, 0, w, h);
+
+            tracingCtx.beginPath();
+            tracingCtx.lineWidth = 16;
+            tracingCtx.strokeStyle = '#94A3B8';
+            tracingCtx.setLineDash([15, 15]);
+            tracingCtx.lineCap = 'round';
+
+            tracingCtx.moveTo(70, h / 2);
+            tracingCtx.bezierCurveTo(w * 0.3, h * 0.1, w * 0.7, h * 0.9, w - 70, h / 2);
+            tracingCtx.stroke();
+
+            tracingCtx.font = '48px serif';
+            tracingCtx.fillText('🐿️', 20, h / 2 + 15);
+            tracingCtx.fillText('🥜', w - 70, h / 2 + 15);
+        }
+
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        function startTracing(e) {
+            isTracing = true;
+            tracingCtx.beginPath();
+            const pt = getCanvasCoords(e);
+            tracingCtx.moveTo(pt.x, pt.y);
+        }
+
+        function moveTracing(e) {
+            if (!isTracing) return;
+            const pt = getCanvasCoords(e);
+
+            tracingCtx.lineWidth = 14;
+            tracingCtx.strokeStyle = '#16A34A';
+            tracingCtx.setLineDash([]);
+            tracingCtx.lineCap = 'round';
+            tracingCtx.lineTo(pt.x, pt.y);
+            tracingCtx.stroke();
+
+            tracedPoints++;
+            let progress = Math.min(Math.round((tracedPoints / 110) * 100), 100);
+            document.getElementById('motorProgress').innerText = `Прогресс: ${progress}%`;
+
+            if (progress >= 100) {
+                isTracing = false;
+                tracedPoints = 0;
+                setTimeout(showRewardModal, 400);
+            }
+        }
+
+        function stopTracing() {
+            isTracing = false;
+        }
+
+        // --- MODULE 3: MEMORY CARDS ---
+        const memoryIcons = ['🍎', '🐶', '🚗', '⭐'];
+        let flippedCards = [];
+        let matchedPairs = 0;
+
+        function initMemoryGame() {
+            const grid = document.getElementById('memoryGrid');
+            grid.innerHTML = '';
+            flippedCards = [];
+            matchedPairs = 0;
+
+            const deck = [...memoryIcons, ...memoryIcons].sort(() => Math.random() - 0.5);
+
+            deck.forEach((icon, index) => {
+                const card = document.createElement('button');
+                card.className = 'card h-32 w-full cursor-pointer bounce-hover border-0 bg-transparent';
+                card.setAttribute('aria-label', `Карточка ${index + 1}`);
+                card.innerHTML = `
+                    <div class="card-inner w-full h-full relative rounded-3xl shadow-lg">
+                        <div class="card-front absolute inset-0 bg-purple-400 border-4 border-purple-300 rounded-3xl flex items-center justify-center text-4xl text-white font-bold">
+                            ❓
+                        </div>
+                        <div class="card-back absolute inset-0 bg-white border-4 border-purple-400 rounded-3xl flex items-center justify-center text-5xl">
+                            ${icon}
+                        </div>
+                    </div>
+                `;
+
+                card.onclick = () => onCardClick(card, icon);
+                grid.appendChild(card);
+            });
+        }
+
+        function onCardClick(card, icon) {
+            if (flippedCards.length >= 2 || card.classList.contains('flipped')) return;
+
+            playSound('pop');
+            card.classList.add('flipped');
+            flippedCards.push({ card, icon });
+
+            if (flippedCards.length === 2) {
+                const [first, second] = flippedCards;
+                if (first.icon === second.icon) {
+                    playSound('success');
+                    matchedPairs++;
+                    flippedCards = [];
+                    if (matchedPairs === memoryIcons.length) {
+                        setTimeout(showRewardModal, 500);
+                    }
+                } else {
+                    playSound('wrong');
+                    setTimeout(() => {
+                        first.card.classList.remove('flipped');
+                        second.card.classList.remove('flipped');
+                        flippedCards = [];
+                    }, 1000);
+                }
+            }
+        }
+
+        // --- MODULE 4: ODD ONE OUT ---
+        const oddQuestions = [
+            { items: ['🍎', '🍌', '🍊', '🚗'], oddIndex: 3, hint: 'Көлік жеміске жатпайды!' },
+            { items: ['🐶', '🐱', '🐰', '⚽'], oddIndex: 3, hint: 'Доп жануарға жатпайды!' },
+            { items: ['🐟', '🐬', '🐳', '✈️'], oddIndex: 3, hint: 'Ұшақ суда жүзбейді!' }
+        ];
+        let currentOddIndex = 0;
+
+        function initOddGame() {
+            currentOddIndex = 0;
+            renderOddQuestion();
+        }
+
+        function renderOddQuestion() {
+            const container = document.getElementById('oddItemsContainer');
+            container.innerHTML = '';
+            const q = oddQuestions[currentOddIndex];
+
+            q.items.forEach((emoji, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'w-28 h-28 bg-white border-4 border-pink-300 rounded-3xl text-6xl flex items-center justify-center shadow-md bounce-hover transition-transform';
+                btn.innerText = emoji;
+                btn.setAttribute('aria-label', `Зат ${idx + 1}`);
+
+                btn.onclick = () => {
+                    if (idx === q.oddIndex) {
+                        playSound('success');
+                        speakText(`Дұрыс! ${q.hint}`);
+                        btn.classList.add('bg-green-100', 'border-green-500');
+                        setTimeout(showRewardModal, 500);
+                    } else {
+                        playSound('wrong');
+                        speakText('Қайтадан қарап көр!');
+                        btn.classList.add('bg-red-100');
+                    }
+                };
+
+                container.appendChild(btn);
+            });
+        }
+
+        function nextOddQuestion() {
+            currentOddIndex = (currentOddIndex + 1) % oddQuestions.length;
+            renderOddQuestion();
+        }
+
+        // --- MODULE 5: EMOTIONS ---
+        const emotionData = [
+            { emoji: '😊', scenario: 'Балаға сыйлық сыйлады!', correct: 'Қуанышты', options: ['Қуанышты', 'Ренжулі', 'Қорқынышты'] },
+            { emoji: '😢', scenario: 'Ойыншық сынды...', correct: 'Ренжулі', options: ['Қуанышты', 'Ренжулі', 'Түңілу'] },
+            { emoji: '😮', scenario: 'Үлкен тосынсый болды!', correct: 'Таңғалу', options: ['Қуанышты', 'Таңғалу', 'Ашулы'] }
+        ];
+        let currentEmotionIndex = 0;
+
+        function initEmotionsGame() {
+            currentEmotionIndex = 0;
+            renderEmotionQuestion();
+        }
+
+        function renderEmotionQuestion() {
+            const data = emotionData[currentEmotionIndex];
+            document.getElementById('emotionEmoji').innerText = data.emoji;
+            document.getElementById('emotionScenario').innerText = `"${data.scenario}"`;
+
+            const container = document.getElementById('emotionOptions');
+            container.innerHTML = '';
+
+            data.options.forEach((opt) => {
+                const btn = document.createElement('button');
+                btn.className = 'py-5 px-6 bg-sky-100 border-4 border-sky-300 hover:bg-sky-200 text-sky-900 font-bold text-2xl rounded-3xl shadow transition-transform bounce-hover';
+                btn.innerText = opt;
+                btn.setAttribute('aria-label', opt);
+
+                btn.onclick = () => {
+                    if (opt === data.correct) {
+                        playSound('success');
+                        speakText(`Өте дұрыс! Бұл — ${opt} эмоциясы.`);
+                        setTimeout(showRewardModal, 500);
+                    } else {
+                        playSound('wrong');
+                        speakText('Ойланып көр, қайта таңда!');
+                    }
+                };
+
+                container.appendChild(btn);
+            });
+        }
+
+        function nextEmotionQuestion() {
+            currentEmotionIndex = (currentEmotionIndex + 1) % emotionData.length;
+            renderEmotionQuestion();
+        }
+
+        // Window Event Handlers
+        window.onresize = () => {
+            if (canvas && !document.getElementById('module-motor').classList.contains('hidden')) {
+                initMotorGame();
+            }
+        };
+
+        window.onload = () => {
+            setTimeout(() => {
+                speakText("Сәлем! Балақай дамыту платформасына кош келдіңіз!");
+            }, 600);
+        };
+    </script>
+</body>
+</html>
